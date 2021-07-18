@@ -10,3 +10,7 @@ This repository contains software tools written for the [(ISC)² Silicon Valley 
   - by Ian Kluft
   - purpose: processes a Zoom webinar attendee report into CSV data with members' CPE points
   - description: This processes a Zoom webinar attendee report (in Comma Separated Values CSV format) into CSV data with members' earned Continuing Professional Education CPE points for the amount of time Zoom says they attended the meeting. I made this for monthly ISC² Silicon Valley Chapter meetings. This could be useful to other ISC² chapters, but not likely for any other purposes.
+- *[install-perl-prereqs](install-perl-prereqs)*
+  - by Ian Kluft
+  - purpose: install Perl module dependencies for running install-perl-prereqs and install-perl-prereqs
+  - description: This script was a result of helping another volunteer at (ISC)² Silicon Valley Chapter to get the install-perl-prereqs and install-perl-prereqs scripts running. I made them on Fedora Linux and now they needed to run on Ubuntu Linux. This script initially tries to install the distro-provided packages and then sets up remaining dependencies with CPAN.
