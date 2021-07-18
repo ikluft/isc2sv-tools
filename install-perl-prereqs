@@ -1,0 +1,66 @@
+#/bin/sh
+# install Perl prerequisite modules for ISC²SV tools
+dep_modules="YAML::XS Modern::Perl Text::CSV_XS File::BOM Date::Calc Date::Calc::XS File::Slurp GD Data::ICal DateTime"
+
+# module_installed function
+module_installed()
+{
+	/usr/bin/perl -M"$1" -e '1;' 2>/dev/null >/dev/null || return 1
+	return 0
+}
+
+# error_exit function
+error_exit()
+{
+	echo $* >&2
+	exit 1
+}
+
+# install packages for system because these are the most efficient
+kernel=$(uname -s)
+if [ "$kernel" = 'Linux' ]
+then
+	if [ \! -e /etc/os-release ]
+	then
+		error_exit "Linux distro not LSB/FHS compliant - /etc/os-release not found - can't determine distro type"
+	fi
+	. /etc/os-release
+	if [ "$ID" = 'fedora' ]
+	then
+		/usr/bin/dnf install perl make perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime
+	elif [ "$ID" = 'debian' -o "$ID" = 'ubuntu' ]
+	then
+		/usr/bin/apt update
+		/usr/bin/apt install perl make libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl
+	elif [ "$ID" = 'alpine' ]
+	then
+		/usr/bin/apk update
+		/usr/bin/apk add perl make perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime
+	else
+		error_exit "automatic installation of prerequisites not yet implemented on ${ID:-unknown distro}"
+	fi
+else
+	error_exit "automatic installation of prerequisites not yet implemented on ${kernel:-unknown kernel}"
+fi
+
+# set PREFIX and PERL5LIB
+export PREFIX=/usr/local/lib/perl
+export PERL5LIB=$PREFIX/lib
+
+# make sure PERL5LIB is set by ~/.bashrc
+if [ $(/usr/bin/id --user) -ne 0 ]
+then
+	grep PERL5LIB ~/.bashrc >/dev/null || {
+		echo "export PERL5LIB=$PERL5LIB" >> ~/.bashrc
+	}
+fi
+/usr/bin/mkdir -p $PERL5LIB
+
+# upgrade to latest CPAN instead of version packaged with Perl
+cpan install YAML CPAN < /dev/null || error_exit "CPAN upgrade failed"
+
+# install ISC²SV tools prerequisites
+for i in $dep_modules
+do
+	module_installed $i || cpan install $i < /dev/null || error_exit "CPAN install $i failed"
+done
