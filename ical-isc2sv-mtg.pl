@@ -26,6 +26,9 @@ Readonly::Scalar my $default_font => "FreeSans";
 Readonly::Scalar my $default_size => 12;
 Readonly::Scalar my $default_fgcolor_rgb => "000000";
 
+# global configuration
+my %options;
+
 # print usage and exit
 sub usage
 {
@@ -36,11 +39,18 @@ sub usage
 	exit 1;
 }
 
+# debugging output
+sub debug
+{
+	if ($options{debug}) {
+		say STDERR "debug: ".join(" ", @_);
+	}
+}
+
 # process command line
-my %options;
-if (not GetOptions(\%options, "date=s", "time=s", "duration=s", "description=s", "organization=s", "timezone:s",
-	"location:s", "conference:s", "url:s", "comment:s", "qrcode:s", "fgcolor:s", "subtitle:s@", "subtitle-height:i",
-	"subtitle-font:s", "subtitle-size:i", "logo:s"))
+if (not GetOptions(\%options, "debug", "date=s", "time=s", "duration=s", "description=s", "organization=s",
+	"timezone:s", "location:s", "conference:s", "url:s", "comment:s", "qrcode:s", "fgcolor:s", "subtitle:s@",
+	"subtitle-height:i", "subtitle-font:s", "subtitle-size:i", "logo:s"))
 {
 	usage();
 }
@@ -53,7 +63,7 @@ foreach my $optname (qw(date time duration description)) {
 if (@missing) {
 	croak "missing required options: ".(join " ", @missing);
 }
-say STDERR "debug: options = ".Dumper(\%options);
+debug "options:", Dumper(\%options);
 
 # process date, time and duration
 my @date = ($options{date} =~ /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/);
@@ -69,7 +79,7 @@ my $start = DateTime->new(
 	hour => $time[0], minute => $time[1], second => $time[2],
 	time_zone => $options{timezone});
 my $duration = DateTime::Duration->new(minutes => $options{duration});
-say STDERR "debug: duration = ".Dumper($duration);
+debug "duration:", Dumper($duration);
 my $end = $start + $duration;
 
 # build ICal object
