@@ -16,8 +16,8 @@ use Getopt::Long;
 use File::Slurp;
 use Date::Calc;
 use File::BOM qw(:subs);
-use Text::CSV_XS qw(csv);
-use YAML::XS;
+use Text::CSV qw(csv);
+use YAML;
 
 use Data::Dumper;
 
@@ -199,7 +199,7 @@ if (exists $cmd_arg{config_file} and defined $cmd_arg{config_file}) {
 	if (not -f $cmd_arg{config_file}) {
 		croak "file ".$cmd_arg{config_file}." does not exist";
 	}
-	my $data = YAML::XS::LoadFile($cmd_arg{config_file});
+	my $data = YAML::LoadFile($cmd_arg{config_file});
 	#say "debug: YAML data -> ".Dumper($data);
 
 	if (ref $data eq "HASH") {
@@ -275,9 +275,9 @@ while (my $line = shift @lines) {
 foreach my $table (sort keys %csv_tables) {
 	$tables{$table} = {};
 	$tables{$table}{data} = [];
-	my $csv = Text::CSV_XS->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1});
+	my $csv = Text::CSV->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1});
 	if (not defined $csv) {
-		croak "Text::CSV_XS initialization failed: ".Text::CSV_XS->error_diag ();
+		croak "Text::CSV initialization failed: ".Text::CSV->error_diag ();
 	}
 	$tables{$table}{count} = -1; # start count from -1 so the header won't be included
 	foreach my $csv_line (@{$csv_tables{$table}}) {
@@ -404,7 +404,7 @@ my @isc2_output;
 # open CSV output filehandle
 open my $out_fh, ">", $config{output}
 	or croak "failed to open ".$config{output}." for writing: $!";
-my $csv = Text::CSV_XS->new ({ binary => 1, auto_diag => 1 });
+my $csv = Text::CSV->new ({ binary => 1, auto_diag => 1 });
 $csv->say($out_fh,
 	["(ISC)² Member #", "Member First Name", "Member Last Name", "Title of Meeting", "# CPEs",
 	"Date of Activity", "CPE qualifying minutes"]);

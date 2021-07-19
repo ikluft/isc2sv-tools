@@ -1,6 +1,6 @@
 #/bin/sh
 # install Perl prerequisite modules for ISC²SV tools
-dep_modules="YAML::XS Modern::Perl Text::CSV_XS File::BOM Date::Calc Date::Calc::XS File::Slurp GD Data::ICal DateTime IPC::Run"
+dep_modules="YAML Modern::Perl Text::CSV File::BOM Date::Calc File::Slurp GD Data::ICal DateTime IPC::Run"
 
 # module_installed function
 module_installed()
@@ -16,6 +16,10 @@ error_exit()
 	exit 1
 }
 
+# binary paths
+export PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:
+mkdir=$(which mkdir)
+
 # install packages for system because these are the most efficient
 kernel=$(uname -s)
 if [ "$kernel" = 'Linux' ]
@@ -27,20 +31,20 @@ then
 	. /etc/os-release
 	if [ "$ID" = 'fedora' ]
 	then
-		/usr/bin/dnf install perl make perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime perl-IPC-Run
+		/usr/bin/dnf install perl perl-inc-latest make perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime perl-IPC-Run
 	elif [ "$ID" = 'debian' -o "$ID" = 'ubuntu' ]
 	then
 		/usr/bin/apt update
 		/usr/bin/apt install perl make libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl libipc-run-perl
 	elif [ "$ID" = 'alpine' ]
 	then
-		/usr/bin/apk update
-		/usr/bin/apk add perl make perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime perl-ipc-run
+		/sbin/apk update
+		/sbin/apk add perl perl-utils perl-inc-latest make perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime perl-ipc-run
 	else
-		error_exit "automatic installation of prerequisites not yet implemented on ${ID:-unknown distro}"
+		error_exit "automatic installation of prerequisites not implemented on ${ID:-unknown distro}"
 	fi
 else
-	error_exit "automatic installation of prerequisites not yet implemented on ${kernel:-unknown kernel}"
+	error_exit "automatic installation of prerequisites not implemented on ${kernel:-unknown kernel}"
 fi
 
 # set PREFIX and PERL5LIB
@@ -48,13 +52,13 @@ export PREFIX=/usr/local/lib/perl
 export PERL5LIB=$PREFIX/lib
 
 # make sure PERL5LIB is set by ~/.bashrc
-if [ $(/usr/bin/id --user) -ne 0 ]
+if [ $(/usr/bin/id -u) -ne 0 ]
 then
 	grep PERL5LIB ~/.bashrc >/dev/null || {
 		echo "export PERL5LIB=$PERL5LIB" >> ~/.bashrc
 	}
 fi
-/usr/bin/mkdir -p $PERL5LIB
+$mkdir -p $PERL5LIB
 
 # upgrade to latest CPAN instead of version packaged with Perl
 cpan install YAML CPAN < /dev/null || error_exit "CPAN upgrade failed"
