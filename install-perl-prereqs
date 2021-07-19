@@ -1,6 +1,6 @@
 #/bin/sh
 # install Perl prerequisite modules for ISC²SV tools
-dep_modules="YAML::XS Modern::Perl Text::CSV_XS File::BOM Date::Calc Date::Calc::XS File::Slurp GD Data::ICal DateTime"
+dep_modules="YAML::XS Modern::Perl Text::CSV_XS File::BOM Date::Calc Date::Calc::XS File::Slurp GD Data::ICal DateTime IPC::Run"
 
 # module_installed function
 module_installed()
@@ -27,15 +27,15 @@ then
 	. /etc/os-release
 	if [ "$ID" = 'fedora' ]
 	then
-		/usr/bin/dnf install perl make perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime
+		/usr/bin/dnf install perl make perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime perl-IPC-Run
 	elif [ "$ID" = 'debian' -o "$ID" = 'ubuntu' ]
 	then
 		/usr/bin/apt update
-		/usr/bin/apt install perl make libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl
+		/usr/bin/apt install perl make libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl libipc-run-perl
 	elif [ "$ID" = 'alpine' ]
 	then
 		/usr/bin/apk update
-		/usr/bin/apk add perl make perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime
+		/usr/bin/apk add perl make perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime perl-ipc-run
 	else
 		error_exit "automatic installation of prerequisites not yet implemented on ${ID:-unknown distro}"
 	fi
