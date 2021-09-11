@@ -17,6 +17,7 @@ use Readonly;
 use YAML::XS;
 
 # configuration constants
+Readonly::Scalar my $yamlfile => "monthly-event-cal.yaml";
 Readonly::Hash my %defaults => (
 	meeting_day => 2, # meeting day of week 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun
 	meeting_week => 2, # meeting week of month
@@ -42,6 +43,16 @@ sub format_date
 {
 	my @date = @_;
 	return sprintf ("%04d-%02d-%02d", @date);
+}
+
+# if YAML file exists, use data in it to override configuration (lower priority than command line, processed next)
+if ( -f $yamlfile ) {
+	my @yamldata = YAML::XS::LoadFile($yamlfile);
+	if (ref $yamldata[0] eq "HASH") {
+		foreach my $key (keys %{$yamldata[0]}) {
+			$config{$key} = $yamldata[0]{$key};
+		}
+	}
 }
 
 # process command line
