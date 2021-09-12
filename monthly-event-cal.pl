@@ -14,6 +14,7 @@ use Modern::Perl qw(2017);
 use Date::Calc qw(Today Add_Delta_Days Delta_Days Nth_Weekday_of_Month_Year Month_to_Text);
 use Getopt::Long;
 use Readonly;
+use File::BaseDir qw(config_files);
 use YAML::XS;
 
 # configuration constants
@@ -45,13 +46,22 @@ sub format_date
 	return sprintf ("%04d-%02d-%02d", @date);
 }
 
-# if YAML file exists, use data in it to override configuration (lower priority than command line, processed next)
-if ( -f $yamlfile ) {
-	my @yamldata = YAML::XS::LoadFile($yamlfile);
-	if (ref $yamldata[0] eq "HASH") {
-		foreach my $key (keys %{$yamldata[0]}) {
-			$config{$key} = $yamldata[0]{$key};
+# If YAML config file exists, use data in it to override configuration.
+# This is lower priority than command line, processed next.
+# Use FreeDesktop.Org XDG Base Directory Specification to search for config files.
+# https://specifications.freedesktop.org/basedir-spec/latest/
+my @configfiles = config_files($yamlfile);
+foreach my $configfile (@configfiles) {
+	say STDERR "debug: checking $configfile";
+	if ( -f $configfile ) {
+		say STDERR "debug: reading $configfile";
+		my @yamldata = YAML::XS::LoadFile($configfile);
+		if (ref $yamldata[0] eq "HASH") {
+			foreach my $key (keys %{$yamldata[0]}) {
+				$config{$key} = $yamldata[0]{$key};
+			}
 		}
+		last; # break out of config file search loop after first one is processed
 	}
 }
 

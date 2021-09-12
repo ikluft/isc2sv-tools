@@ -31,15 +31,15 @@ then
 	. /etc/os-release
 	if [ "$ID" = 'fedora' ]
 	then
-		/usr/bin/dnf install perl perl-inc-latest make qrencode gnu-free-sans-fonts perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime perl-IPC-Run
+		/usr/bin/dnf install perl perl-inc-latest make qrencode gnu-free-sans-fonts perl-Modern-Perl perl-YAML-LibYAML perl-Text-CSV_XS perl-File-BOM perl-Date-Calc perl-Date-Calc-XS perl-GD perl-Data-ICal perl-DateTime perl-IPC-Run perl-File-BaseDir
 	elif [ "$ID" = 'debian' -o "$ID" = 'ubuntu' ]
 	then
 		/usr/bin/apt update
-		/usr/bin/apt install perl make qrencode fonts-freefont-otf libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl libipc-run-perl
+		/usr/bin/apt install perl make qrencode fonts-freefont-otf libmodern-perl-perl libyaml-libyaml-perl libtext-csv-xs-perl libfile-bom-perl libdate-calc-perl  libdate-calc-xs-perl libfile-slurp-perl libgd-perl libdata-ical-perl libdatetime-perl libipc-run-perl libfile-basedir-perl
 	elif [ "$ID" = 'alpine' ]
 	then
 		/sbin/apk update
-		/sbin/apk add perl perl-utils perl-inc-latest make libqrencode ttf-freefont perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime perl-ipc-run
+		/sbin/apk add perl perl-utils perl-inc-latest make libqrencode ttf-freefont perl-yaml-libyaml perl-text-csv_xs perl-date-calc perl-file-slurp perl-gd perl-data-ical perl-datetime perl-ipc-run perl-file-basedir
 	else
 		error_exit "automatic installation of prerequisites not implemented on ${ID:-unknown distro}"
 	fi
