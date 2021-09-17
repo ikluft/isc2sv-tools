@@ -39,6 +39,14 @@ sub config
 	return $config{$_[0]} // '';
 }
 
+sub debug
+{
+	my @args = @_;
+	if (config('debug') or $ENV{MONTHLY_EVENT_DEBUG}) {
+		say STDERR "debug: ".join(' ', @args);
+	}
+}
+
 # generate ISO 8601 format date from Date::Calc (array of integers with year, month, day)
 sub format_date
 {
@@ -52,9 +60,9 @@ sub format_date
 # https://specifications.freedesktop.org/basedir-spec/latest/
 my @configfiles = config_files($yamlfile);
 foreach my $configfile (@configfiles) {
-	say STDERR "debug: checking $configfile";
+	debug "checking $configfile";
 	if ( -f $configfile ) {
-		say STDERR "debug: reading $configfile";
+		debug "reading $configfile";
 		my @yamldata = YAML::XS::LoadFile($configfile);
 		if (ref $yamldata[0] eq "HASH") {
 			foreach my $key (keys %{$yamldata[0]}) {
@@ -66,7 +74,7 @@ foreach my $configfile (@configfiles) {
 }
 
 # process command line
-GetOptions ( \%config, qw(meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s deadline_heading:s
+GetOptions ( \%config, qw(debug meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s deadline_heading:s
 	prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i))
 	or die "Error in command line arguments";
 
