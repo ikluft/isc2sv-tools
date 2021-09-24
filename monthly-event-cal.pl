@@ -36,7 +36,8 @@ my %config = %defaults;
 # configuration variable lookup
 sub config
 {
-	return $config{$_[0]} // '';
+	my @args = @_;
+	return $config{$args[0]} // '';
 }
 
 sub debug
@@ -45,6 +46,7 @@ sub debug
 	if (config('debug') or $ENV{MONTHLY_EVENT_DEBUG}) {
 		say STDERR "debug: ".join(' ', @args);
 	}
+	return;
 }
 
 # generate ISO 8601 format date from Date::Calc (array of integers with year, month, day)
