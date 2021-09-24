@@ -11,6 +11,7 @@ use strict;
 use warnings;
 use utf8;
 use Modern::Perl qw(2017);
+use Carp qw(carp croak confess);
 use Date::Calc qw(Today Add_Delta_Days Delta_Days Nth_Weekday_of_Month_Year Month_to_Text);
 use Getopt::Long;
 use Readonly;
@@ -82,7 +83,7 @@ foreach my $configfile (@configfiles) {
 # process command line
 GetOptions ( \%config, qw(debug meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s deadline_heading:s
 	prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i))
-	or die "Error in command line arguments";
+	or croak "Error in command line arguments";
 
 # default @start_month to this year and month
 my @start_month = Today; pop @start_month;
@@ -110,7 +111,8 @@ foreach my $str (
 my $done = 0;
 my @current_ym = @start_month;
 my $count = 0;
-do {
+my $limit = config('gen_months');
+while ($count < $limit) {
 	# generate events
 	my $month = Month_to_Text($current_ym[1]);
 	my @mtg_date = Nth_Weekday_of_Month_Year(@current_ym, config('meeting_day'), config('meeting_week'));
@@ -132,7 +134,7 @@ do {
 		$current_ym[1] = 1;
 		$current_ym[0]++;
 	}
-} until $count >= config('gen_months');
+}
 
 # table footer
 say "</table>";
