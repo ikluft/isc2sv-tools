@@ -55,10 +55,15 @@ sub format_date
 }
 
 # If YAML config file exists, use data in it to override configuration.
-# This is lower priority than command line, processed next.
+# This is lower priority than command line, which is processed next and will override YAML configs.
 # Use FreeDesktop.Org XDG Base Directory Specification to search for config files.
 # https://specifications.freedesktop.org/basedir-spec/latest/
 my @configfiles = config_files($yamlfile);
+if (-f "./$yamlfile") {
+	# if YAML file of the right name exists in current directory, consider it last in the search
+	# so that configs with the same keys are overridden
+	push @configfiles, "./$yamlfile";
+}
 foreach my $configfile (@configfiles) {
 	debug "checking $configfile";
 	if ( -f $configfile ) {
@@ -69,7 +74,6 @@ foreach my $configfile (@configfiles) {
 				$config{$key} = $yamldata[0]{$key};
 			}
 		}
-		last; # break out of config file search loop after first one is processed
 	}
 }
 
