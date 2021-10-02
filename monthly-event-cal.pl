@@ -16,6 +16,12 @@ use Date::Calc qw(Today Add_Delta_Days Delta_Days Nth_Weekday_of_Month_Year Mont
 use Getopt::Long;
 use Readonly;
 use File::BaseDir qw(config_files);
+use DateTime;
+use DateTime::Duration;
+use Data::ICal;
+use Data::ICal::Entry::Event;
+use Data::ICal::TimeZone;
+use Data::ICal::DateTime;
 use YAML::XS;
 
 # configuration constants
@@ -30,6 +36,9 @@ Readonly::Hash my %defaults => (
 	deadline_delta => 17, # delta days for submission deadline date (positive number)
 	gen_months => 6, # months of calendar table entries to generate
 );
+Readonly::Hash my %param_types => ( # parameters with special processing instructions: comma = comma-separated
+	ical => 'comma',
+);
 
 # globals
 my %config = %defaults;
@@ -38,7 +47,15 @@ my %config = %defaults;
 sub config
 {
 	my @args = @_;
-	return $config{$args[0]} // '';
+	if (exists $config{$args[0]}) {
+		if ((exists $param_types{$args[0]}) and $param_types{$args[0]} eq 'comma'
+			and ref $config{$args[0]} eq "ARRAY")
+		{
+			# allow multiple args each as comma-separated strings
+			return split(/,/x, join(',', @$config{$args[0]}));
+		}
+		return $config{$args[0]};
+	}
 }
 
 sub debug
@@ -82,7 +99,7 @@ foreach my $configfile (@configfiles) {
 
 # process command line
 GetOptions ( \%config, qw(debug meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s deadline_heading:s
-	prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i))
+	prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i ical:s@ ical_out:s))
 	or croak "Error in command line arguments";
 
 # default @start_month to this year and month
@@ -107,6 +124,25 @@ foreach my $str (
 	say $str;
 }
 
+# process ICal parameters if present
+my @ical_text;
+my %ical_select;
+foreach my $ical_item (config('ical')) {
+	if ($ical_item eq 'all') {
+		$ical_select{deadline} = 1;
+		$ical_select{prep_event} = 1;
+		$ical_select{meeting} = 1;
+	} elsif ($ical_item eq 'deadline') {
+		$ical_select{deadline} = 1;
+	} elsif ($ical_item eq 'prep_event') {
+		$ical_select{prep_event} = 1;
+	} elsif ($ical_item eq 'meeting') {
+		$ical_select{meeting} = 1;
+	} else {
+		croak "unrecognized ical event type '$ical_item' specified";
+	}
+}
+
 # loop through next n months
 my $done = 0;
 my @current_ym = @start_month;
@@ -128,6 +164,8 @@ while ($count < $limit) {
 		$count++;
 	}
 
+	# TODO add ICal event generation
+
 	# advance to next month
 	$current_ym[1]++;
 	if ($current_ym[1] > 12) {
@@ -139,3 +177,7 @@ while ($count < $limit) {
 # table footer
 say "</table>";
 
+# write ICal event text to file
+if (@ical_text) {
+	# TODO open file and write ICal text
+}
