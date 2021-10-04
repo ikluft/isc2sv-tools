@@ -24,8 +24,14 @@ use Data::ICal::TimeZone;
 use Data::ICal::DateTime;
 use YAML::XS;
 
+#
 # configuration constants
+#
+
+# configuration file to search for in various configuration paths
 Readonly::Scalar my $yamlfile => "monthly-event-cal.yaml";
+
+# default configuration
 Readonly::Hash my %defaults => (
 	meeting_day => 2, # meeting day of week 1=Mon 2=Tue 3=Wed 4=Thu 5=Fri 6=Sat 7=Sun
 	meeting_week => 2, # meeting week of month
@@ -36,11 +42,16 @@ Readonly::Hash my %defaults => (
 	deadline_delta => 17, # delta days for submission deadline date (positive number)
 	gen_months => 6, # months of calendar table entries to generate
 );
-Readonly::Hash my %param_types => ( # parameters with special processing instructions: comma = comma-separated
-	ical => 'comma',
-);
 
+# parameters with special processing instructions: comma = comma-separated
+Readonly::Hash my %param_types => (ical => 'comma');
+
+# ICal events to generate
+Readonly::Hash my %ical_types => (deadline => 1, prep_event => 2, meeting => 3);
+
+#
 # globals
+#
 my %config = %defaults;
 
 # configuration variable lookup
@@ -111,6 +122,21 @@ if (exists $config{start_month}) {
 	$start_month[1] = $config{start_month};
 }
 
+# process ICal parameters if present
+my @ical_text;
+my %ical_select;
+foreach my $ical_item (config('ical')) {
+	if ($ical_item eq 'all') {
+		foreach my $key (keys %ical_types) {
+			$ical_select{$key} = 1;
+		}
+	} elsif (exists $ical_types{$ical_item}) {
+			$ical_select{$ical_item} = 1;
+	} else {
+		croak "unrecognized ical event type '$ical_item' specified";
+	}
+}
+
 # table heading
 foreach my $str (
 	"<table>",
@@ -122,25 +148,6 @@ foreach my $str (
 	"</tr>",
 ) {
 	say $str;
-}
-
-# process ICal parameters if present
-my @ical_text;
-my %ical_select;
-foreach my $ical_item (config('ical')) {
-	if ($ical_item eq 'all') {
-		$ical_select{deadline} = 1;
-		$ical_select{prep_event} = 1;
-		$ical_select{meeting} = 1;
-	} elsif ($ical_item eq 'deadline') {
-		$ical_select{deadline} = 1;
-	} elsif ($ical_item eq 'prep_event') {
-		$ical_select{prep_event} = 1;
-	} elsif ($ical_item eq 'meeting') {
-		$ical_select{meeting} = 1;
-	} else {
-		croak "unrecognized ical event type '$ical_item' specified";
-	}
 }
 
 # loop through next n months
@@ -164,7 +171,8 @@ while ($count < $limit) {
 		$count++;
 	}
 
-	# TODO add ICal event generation
+	# add ICal event generation
+	
 
 	# advance to next month
 	$current_ym[1]++;
