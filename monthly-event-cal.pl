@@ -130,6 +130,7 @@ foreach my $ical_item (config('ical')) {
 		foreach my $key (keys %ical_types) {
 			$ical_select{$key} = 1;
 		}
+		last; # skip any other ICal generation parameters since we turned them all on with "all"
 	} elsif (exists $ical_types{$ical_item}) {
 			$ical_select{$ical_item} = 1;
 	} else {
@@ -172,7 +173,14 @@ while ($count < $limit) {
 	}
 
 	# add ICal event generation
-	
+	foreach my $key (sort keys %ical_select) {
+		my $vevent = Data::ICal::Entry::Event->new();
+		if ((exists $config{events}{$key}) and ref $config{events}{$key} eq "HASH") {
+			$vevent->add_properties(
+				%{$config{events}{$key}}
+			);
+		}
+	}
 
 	# advance to next month
 	$current_ym[1]++;
