@@ -63,7 +63,7 @@ sub config
 			and ref $config{$args[0]} eq "ARRAY")
 		{
 			# allow multiple args each as comma-separated strings
-			return split(/,/x, join(',', @$config{$args[0]}));
+			return split(/,/x, join(',', @{$config{$args[0]}}));
 		}
 		return $config{$args[0]};
 	}
@@ -176,8 +176,9 @@ while ($count < $limit) {
 	foreach my $key (sort keys %ical_select) {
 		my $vevent = Data::ICal::Entry::Event->new();
 		if ((exists $config{events}{$key}) and ref $config{events}{$key} eq "HASH") {
+			my @attrs = %{$config{events}{$key}};
 			$vevent->add_properties(
-				%{$config{events}{$key}}
+				@attrs
 			);
 		}
 	}
