@@ -15,7 +15,7 @@ use Carp qw(carp croak confess);
 use Date::Calc qw(Today Add_Delta_Days Delta_Days Nth_Weekday_of_Month_Year Month_to_Text);
 use Getopt::Long;
 use Readonly;
-use File::BaseDir qw(config_files);
+use File::BaseDir qw(config_files data_home);
 use DateTime;
 use DateTime::Duration;
 use Data::ICal;
@@ -29,7 +29,9 @@ use YAML::XS;
 #
 
 # configuration file to search for in various configuration paths
-Readonly::Scalar my $yamlfile => "monthly-event-cal.yaml";
+Readonly::Scalar my $progbase => "monthly-event-cal";
+Readonly::Scalar my $yamlfile => "$progbase.yaml";
+Readonly::Scalar my $icalfile => "$progbase.ics";
 
 # default configuration
 Readonly::Hash my %defaults => (
@@ -123,7 +125,7 @@ if (exists $config{start_month}) {
 }
 
 # process ICal parameters if present
-my @ical_text;
+my @ical_events;
 my %ical_select;
 foreach my $ical_item (config('ical')) {
 	if ($ical_item eq 'all') {
@@ -195,6 +197,17 @@ while ($count < $limit) {
 say "</table>";
 
 # write ICal event text to file
-if (@ical_text) {
-	# TODO open file and write ICal text
+if (@ical_events) {
+	# add events to calendar object
+	my $calendar = Data::ICal->new();
+	$calendar->add_entries(@ical_events);
+
+	# open file and write ICal text
+	my $ical_out_path = config("ical_out") // data_home($progbase, $icalfile);
+	open(my $out_fh, '>', $ical_out_path)
+		or croak "failed to open ICal data file for output: $!";
+	print $out_fh $calendar->as_string
+		or croak "failed to write to ICal data file: $!";
+	close $out_fh
+		or croak "failed to close ICal data file: $!";
 }
