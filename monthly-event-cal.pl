@@ -183,8 +183,9 @@ sub main
 	}
 
 	# process command line
-	GetOptions ( \%config, qw(debug meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s deadline_heading:s
-		prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i ical:s@ ical_out:s))
+	GetOptions ( \%config, qw(debug meeting_day:i meeting_week:i meeting_heading:s prep_event_heading:s
+		deadline_heading:s prep_event_delta:i deadline_delta:i gen_months:i start_year|year:i start_month|month:i
+		ical:s@ ical_out:s))
 		or croak "Error in command line arguments";
 
 	# default @start_month to this year and month
@@ -246,7 +247,7 @@ sub main
 	# catch any exceptions thrown in main routine
 	if (defined $EVAL_ERROR) {
         # print exception as a plain string
-        say STDERR "$0 failed: $EVAL_ERROR";
+        say STDERR "$0 failed with exception: $EVAL_ERROR";
         exit 1;
 	}
 }
