@@ -201,6 +201,7 @@ sub main
 	my @ical_events;
 	my %ical_select;
 	foreach my $ical_item (config('ical')) {
+		next if ((not defined $ical_item) or not $ical_item);
 		if ($ical_item eq 'all') {
 			foreach my $key (keys %ical_types) {
 				$ical_select{$key} = 1;
