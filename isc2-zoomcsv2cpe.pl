@@ -5,6 +5,14 @@
 #       AUTHOR: Ian Kluft
 # ORGANIZATION: (ISC)² Silicon Valley Chapter
 #      CREATED: 04/14/2021 04:12:54 PM
+#  CLI OPTIONS: --max_cpe=integer CPEs (abbreviated --cpe)
+#               --start=scheduled start time
+#               --end=scheduled end time
+#               --bus_end=end of business actual time (abbrev --biz)
+#               --start_grade_period=integer minutes of grace period at start (default 10, abbrev --grace)
+#               --meeting_title=title (abbrev --title)
+#               --config_file=YAML config file path (abbrev --config)
+#               --output=output file path
 #===============================================================================
 use strict;
 use warnings;
