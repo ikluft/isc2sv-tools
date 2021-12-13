@@ -24,8 +24,8 @@ use Getopt::Long;
 use File::Slurp;
 use Date::Calc;
 use File::BOM qw(:subs);
-use Text::CSV qw(csv);
-use YAML;
+use Text::CSV_XS qw(csv);
+use YAML::XS;
 
 use Data::Dumper;
 
@@ -80,7 +80,7 @@ sub genIndexHash
 sub parseDate
 {
     my $date_str = shift;
-    defined $date_str or croak "parseDate: undefined data string";
+    defined $date_str or croak "parseDate: undefined date string";
     if ($date_str =~ /(\w+)\s+(\d+),\s+(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)/) {
         my $month = Date::Calc::Decode_Month($1);
         my $day = $2;
@@ -218,8 +218,45 @@ sub tableFetch
 
 # read command line arguments
 GetOptions( \%cmd_arg, "max_cpe|cpe:i", "start:s", "end:s", "bus_end|biz:s", "start_grade_period|grace:i",
-    "title|meeting_title:s", "config_file|config:s", "output:s")
+    "title|meeting_title:s", "config_file|config:s", "output:s", "gen_makefile|gen-makefile")
     or croak "command line argument processing failed";
+
+# if --gen-makefile was specified, stop processing and generate a makefile instead
+if ($cmd_arg{gen_makefile} // 0) {
+    # find files
+    opendir(my $dh, ".") || die "Can't opendir current directory: $!";
+    my @file_list = readdir($dh);
+    closedir $dh;
+    my @attendee_report = grep { /^[0-9]+_Attendee_Report\.csv$/ && -f "$_" } @file_list;
+    my @config_files = sort grep { /^cpe-config-[0-9]{4}-[0-9]{2}\.yaml$/ && -f "$_" } @file_list;
+
+    # check required files exist
+    if (not @attendee_report) {
+        croak "attendee report not found: make sure it's named *_Attendee_Report.csv";
+    }
+    if (scalar @attendee_report > 1) {
+        croak "more than one attendee report file found. Move different months' reports to different subdirectories.";
+    }
+    if (not @config_files) {
+        croak "Config file not found: make sure  it's named cpe-config-yyyy-mm.yaml";
+    }
+
+    # find year and month from config file name
+    $config_files[0] =~ qr/-([0-9]{4})-([0-9]{2})\./;
+    my ($year, $month) = ($1, sprintf("%02d", $2));
+    my $outfile = "cpe-report-2021-11.csv";
+
+    # generate Makefile
+    my $tab = chr(9);
+    open(my $fh, ">", "Makefile")
+        or croak "can't open Makefile for writing: $!";
+    say $fh "CPEPROG := \$(shell which isc2-zoomcsv2cpe.pl)";
+    say $fh "cpe-report-$year-$month.csv: ".$config_files[0]." ".$attendee_report[0]." \$(CPEPROG)";
+    say $fh $tab."\$(CPEPROG) --config=".$config_files[0]." --output=cpe-report-$year-$month.csv ".$attendee_report[0];
+    close $fh;
+    
+    exit 0;
+}
 
 # read YAML configuration
 # YAML configuration can set same options as the command line
@@ -228,7 +265,7 @@ if (exists $cmd_arg{config_file} and defined $cmd_arg{config_file}) {
     if (not -f $cmd_arg{config_file}) {
         croak "file ".$cmd_arg{config_file}." does not exist";
     }
-    my $data = YAML::LoadFile($cmd_arg{config_file});
+    my $data = YAML::XS::LoadFile($cmd_arg{config_file});
     debug_print "YAML data -> ".Dumper($data);
 
     if (ref $data eq "HASH") {
@@ -306,9 +343,10 @@ if (debug()) {
 foreach my $table (sort keys %csv_tables) {
     $tables{$table} = {};
     $tables{$table}{data} = [];
-    my $csv = Text::CSV->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1});
+    my $csv = Text::CSV_XS->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1, decode_utf8 => 1,
+        allow_loose_quotes => 1, allow_loose_escapes => 1});
     if (not defined $csv) {
-        croak "Text::CSV initialization failed: ".Text::CSV->error_diag ();
+        croak "Text::CSV_XS initialization failed: ".Text::CSV_XS->error_diag ();
     }
     $tables{$table}{count} = -1; # start count from -1 so the header won't be included
     foreach my $csv_line (@{$csv_tables{$table}}) {
@@ -438,7 +476,7 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
     # open CSV output filehandle
     open my $out_fh, ">", $config{output}
         or croak "failed to open ".$config{output}." for writing: $!";
-    my $csv = Text::CSV->new ({ binary => 1, auto_diag => 1 });
+    my $csv = Text::CSV_XS->new ({ binary => 1, auto_diag => 1 });
     $csv->say($out_fh,
         ["(ISC)2 Member #", "Member First Name", "Member Last Name", "Title of Meeting", "# CPEs",
         "Date of Activity", "CPE qualifying minutes"]);
