@@ -493,9 +493,14 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
         }
 
         # if ISC² member certificate number is available, generate CSV for ISC²
-        if (exists $record->{isc2}) {
+        if (exists $record->{isc2} and $record->{isc2} =~ qr/\d+/) {
+            # filter out extraneous text as long as the text includes an ISC2 cert name and a number is present
+            my $isc2num = $record->{isc2};
+            if ($isc2num =~ qr/cissp|csslp|sscp|ccsp|cap|hcispp/i) {
+                $isc2num =~ s/\D+//g;
+            }
             $csv->say ($out_fh,
-                [$record->{isc2}, $record->{'first name'}, $record->{'last name'},
+                [$isc2num, $record->{'first name'}, $record->{'last name'},
                 $config{title}, $record->{cpe},
                 sprintf("%02d/%02d/%04d", $timestamp{start}[1], $timestamp{start}[2], $timestamp{start}[0]),
                 $record->{cpe_minutes}]);
