@@ -5,7 +5,7 @@
 #       AUTHOR: Ian Kluft
 # ORGANIZATION: (ISC)² Silicon Valley Chapter
 #      CREATED: 04/14/2021 04:12:54 PM
-#  CLI OPTIONS: --max_cpe=integer CPEs (abbreviated --cpe)
+#  CLI OPTIONS: --max_cpe=integer CPEs (default 2, abbreviated --cpe)
 #               --start=scheduled start time
 #               --end=scheduled end time
 #               --bus_end=end of business actual time (abbrev --biz)
@@ -37,11 +37,30 @@ my %config = (
 );
 
 # globals
-my (%timestamp, %tables, %index, %attendee);
+my (%timestamp, %tables, %index, %attendee, %cmd_arg);
 
 #
 # functions
 #
+
+# return debug mode status
+sub debug
+{
+    return 1 if ($config{debug} // 0); # config can be set from YAML or command-line
+    return 1 if ($cmd_arg{debug} // 0); # cmd_arg can be set from command-line
+    return 1 if ($ENV{DEBUG_CPE} // 0); # environment DEBUG_CPE can enable debugging if needed earlier than CLI/config
+    return 0;
+}
+
+# debug_print: print debug message, only if in debug mode
+sub debug_print
+{
+    my @args = @_;
+    if (debug()) {
+        say STDERR "debug: ".(join " ", @args);
+    }
+    return;
+}
 
 # generate name-to-index hash from list of strings (table names or column headings)
 sub genIndexHash
@@ -104,11 +123,13 @@ sub combineTimeline
 {
 	my $timeline = shift;
 	my $index = 0;
-	#foreach my $rec (@$timeline) {
-	#	say STDERR "debug: combineTimeline: ".join(" ", map { $_."=".$rec->{$_} } sort keys %$rec);
-	#}
+    if (debug()) {
+        foreach my $rec (@$timeline) {
+            say STDERR "debug: combineTimeline: ".join(" ", map { $_."=".$rec->{$_} } sort keys %$rec);
+        }
+    }
 	while ($index < scalar @$timeline-1) {
-		#say STDERR "debug: combineTimeline: index=$index size=".(scalar @$timeline);
+		debug_print "combineTimeline: index=$index size=".(scalar @$timeline);
 		my $cur_end = Date::Calc::Date_to_Time(parseDate($timeline->[$index]{'leave time'}));
 		my $next_start = Date::Calc::Date_to_Time(parseDate($timeline->[$index+1]{'join time'}));
 		if ($cur_end <= $next_start and $next_start - $cur_end < 60) {
@@ -121,6 +142,7 @@ sub combineTimeline
 			$index++;
 		}
 	}
+    return;
 }
 
 # compute CPEs from attendee timeline data
@@ -195,7 +217,6 @@ sub tableFetch
 #
 
 # read command line arguments
-my %cmd_arg;
 GetOptions( \%cmd_arg, "max_cpe|cpe:i", "start:s", "end:s", "bus_end|biz:s", "start_grade_period|grace:i",
 	"title|meeting_title:s", "config_file|config:s", "output:s")
 	or croak "command line argument processing failed";
@@ -208,7 +229,7 @@ if (exists $cmd_arg{config_file} and defined $cmd_arg{config_file}) {
 		croak "file ".$cmd_arg{config_file}." does not exist";
 	}
 	my $data = YAML::LoadFile($cmd_arg{config_file});
-	#say "debug: YAML data -> ".Dumper($data);
+	debug_print "YAML data -> ".Dumper($data);
 
 	if (ref $data eq "HASH") {
 		# copy base configuration from YAML to config
@@ -273,9 +294,11 @@ while (my $line = shift @lines) {
 }
 
 # debug: print names and sizes of tables
-#foreach my $table (sort keys %csv_tables) {
-#	say $table.": ".scalar(@{$csv_tables{$table}});
-#}
+if (debug()) {
+    foreach my $table (sort keys %csv_tables) {
+        say $table.": ".scalar(@{$csv_tables{$table}});
+    }
+}
 
 #
 # 2nd pass: process CSV text tables into array-of-arrays structure
@@ -301,7 +324,7 @@ foreach my $table (sort keys %csv_tables) {
 }
 
 # debug: print data from 2nd pass
-#say Dumper(\%tables);
+debug_print Dumper(\%tables);
 
 #
 # 3rd pass: tally user attendance
@@ -348,9 +371,11 @@ if (exists $config{bus_end} and defined $config{bus_end}) {
 	# end of business detaults to end of meeting, highly recommended to use --bix parameter to set end of business time
 	$timestamp{bus_end} = $timestamp{end};
 }
-#foreach my $rec (keys %timestamp) {
-#	say STDERR "debug: timestamp $rec: ".join("-", @{$timestamp{$rec}});
-#}
+if (debug()) {
+    foreach my $rec (keys %timestamp) {
+    	say STDERR "debug: timestamp $rec: ".join("-", @{$timestamp{$rec}});
+    }
+}
 
 # assemble per-user attendance data
 foreach my $table ('host details', 'attendee details', 'panelist details') {
@@ -407,36 +432,40 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
 #
 # compute attendee CPEs and generate CSV (spreadsheet) output CPE data for ISC²
 #
-my @isc2_output;
+{
+    ## no critic (InputOutput::RequireBriefOpen)
 
-# open CSV output filehandle
-open my $out_fh, ">", $config{output}
-	or croak "failed to open ".$config{output}." for writing: $!";
-my $csv = Text::CSV->new ({ binary => 1, auto_diag => 1 });
-$csv->say($out_fh,
-	["(ISC)² Member #", "Member First Name", "Member Last Name", "Title of Meeting", "# CPEs",
-	"Date of Activity", "CPE qualifying minutes"]);
+    # open CSV output filehandle
+    open my $out_fh, ">", $config{output}
+        or croak "failed to open ".$config{output}." for writing: $!";
+    my $csv = Text::CSV->new ({ binary => 1, auto_diag => 1 });
+    $csv->say($out_fh,
+        ["(ISC)2 Member #", "Member First Name", "Member Last Name", "Title of Meeting", "# CPEs",
+        "Date of Activity", "CPE qualifying minutes"]);
 
-# loop through attendee records: compute CPEs and output CSV CPE data for ISC²
-foreach my $akey (sort {$attendee{$a}{'last name'} cmp $attendee{$b}{'last name'}} keys %attendee) {
-	if (not exists $attendee{$akey}{cpe}) {
-		my $cpe = computeCPE($attendee{$akey});
-		next if not defined $cpe;
-		if ($cpe > 0) {
-			$attendee{$akey}{cpe} = $cpe;
-		}
-	}
+    # loop through attendee records: compute CPEs and output CSV CPE data for ISC²
+    foreach my $akey (sort {$attendee{$a}{'last name'} cmp $attendee{$b}{'last name'}} keys %attendee) {
+        my $record = $attendee{$akey};
+        if (not exists $record->{cpe}) {
+            my $cpe = computeCPE($attendee{$akey});
+            next if not defined $cpe;
+            if ($cpe > 0) {
+                $record->{cpe} = $cpe;
+            }
+        }
 
-	# if ISC² member certificate number is available, generate CSV for ISC²
-	if (exists $attendee{$akey}{isc2}) {
-		my $record = $attendee{$akey};
-		$csv->say ($out_fh,
-			[$record->{isc2}, $record->{'first name'}, $record->{'last name'},
-			$config{title}, $record->{cpe},
-			sprintf("%02d/%02d/%04d", $timestamp{start}[1], $timestamp{start}[2], $timestamp{start}[0]),
-			$record->{cpe_minutes}]);
-	}
+        # if ISC² member certificate number is available, generate CSV for ISC²
+        if (exists $record->{isc2}) {
+            $csv->say ($out_fh,
+                [$record->{isc2}, $record->{'first name'}, $record->{'last name'},
+                $config{title}, $record->{cpe},
+                sprintf("%02d/%02d/%04d", $timestamp{start}[1], $timestamp{start}[2], $timestamp{start}[0]),
+                $record->{cpe_minutes}]);
+        } else {
+            say STDERR "skipping ".$record->{'last name'}.", ".$record->{'first name'}.": no ISC2 number data";
+        }
+    }
+    close $out_fh
+        or croak "failed to close ".$config{output}.": $!";
+    debug_print "attendee data -> ".Dumper(\%attendee);
 }
-close $out_fh
-	or croak "failed to close ".$config{output}.": $!";
-#say "debug: attendee data -> ".Dumper(\%attendee);
