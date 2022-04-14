@@ -293,7 +293,15 @@ foreach my $key (keys %cmd_arg) {
 # read CSV text
 my $csv_file = shift @ARGV;
 if (not $csv_file) {
-    $csv_file = "/proc/self/fd/0"; # use STDIN
+    foreach my $stdin_path (qw(/proc/self/fd/0 /dev/fd/0)) {
+        if (-e $stdin_path) {
+            $csv_file = "/proc/self/fd/0"; # use STDIN
+            break;
+        }
+    }
+    if (not $csv_file) {
+        croak "input file not specified and couldn't find stdin path on this system to use as default";
+    }
 }
 if (not -f $csv_file) {
     croak "file $csv_file does not exist";
