@@ -303,7 +303,7 @@ if (not $csv_file) {
         croak "input file not specified and couldn't find stdin path on this system to use as default";
     }
 }
-if (not -f $csv_file) {
+if (not -e $csv_file) {
     croak "file $csv_file does not exist";
 }
 open_bom(my $fh, $csv_file, ":utf8"); # use File::BOM::open_bom because Zoom's CSV report is UTF8 with Byte Order Mark
