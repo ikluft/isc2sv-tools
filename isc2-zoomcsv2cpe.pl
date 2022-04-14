@@ -295,7 +295,7 @@ my $csv_file = shift @ARGV;
 if (not $csv_file) {
     foreach my $stdin_path (qw(/proc/self/fd/0 /dev/fd/0)) {
         if (-e $stdin_path) {
-            $csv_file = "/proc/self/fd/0"; # use STDIN
+            $csv_file = $stdin_path; # use STDIN
             last;
         }
     }
