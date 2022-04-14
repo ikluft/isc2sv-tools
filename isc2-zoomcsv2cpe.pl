@@ -296,7 +296,7 @@ if (not $csv_file) {
     foreach my $stdin_path (qw(/proc/self/fd/0 /dev/fd/0)) {
         if (-e $stdin_path) {
             $csv_file = "/proc/self/fd/0"; # use STDIN
-            break;
+            last;
         }
     }
     if (not $csv_file) {
