@@ -9,7 +9,7 @@
 #               --start=scheduled start time
 #               --end=scheduled end time
 #               --bus_end=end of business actual time (abbrev --biz)
-#               --start_grade_period=integer minutes of grace period at start (default 10, abbrev --grace)
+#               --start_grace_period=integer minutes of grace period at start (default 10, abbrev --grace)
 #               --meeting_title=title (abbrev --title)
 #               --config_file=YAML config file path (abbrev --config)
 #               --output=output file path
