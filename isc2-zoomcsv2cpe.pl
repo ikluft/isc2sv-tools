@@ -19,7 +19,9 @@ use warnings;
 use utf8;
 use autodie;
 use Modern::Perl qw(2018);
+use feature qw(say fc);
 use Carp qw(croak);
+use Readonly;
 use Getopt::Long;
 use File::Slurp;
 use Date::Calc;
@@ -29,15 +31,31 @@ use YAML;
 
 use Data::Dumper;
 
-# configuration
-my %config = (
+# constants
+Readonly::Hash my %default_config => (
     max_cpe => 2,   # default 2 CPEs
     start_grace_period => 10, # 10 minute connection grace period at schedule start to qualify for max CPEs
     output => "/dev/stdout",
 );
+Readonly::Hash my %option_def => (
+    "help" => "display these usage instructions",
+    "max_cpe|cpe:i" => "maximum CPEs for the event (default ".$default_config{max_cpe}.")",
+    "start:s" => "scheduled start time in YYYY-MM-DD HH:MM:SS format",
+    "end:s" => "scheduled end time in YYYY-MM-DD HH:MM:SS format",
+    "bus_end|biz:s" => "actual end time in YYYY-MM-DD HH:MM:SS format",
+    "start_grade_period|grace:i" => "minutes of grace period at start of meeting (default "
+        .$default_config{start_grace_period}.")",
+    "title|meeting_title:s" => "meeting title",
+    "config_file|config:s" => "meeting configuration file",
+    "output:s" => "output file (default to standard output)",
+    "gen_makefile|gen-makefile" => "generate Makefile instead of CPE report (advanced users with make installed)",
+);
+
+# configuration
+my %config = %default_config;
 
 # globals
-my (%timestamp, %tables, %index, %attendee, %cmd_arg);
+my (%timestamp, %tables, %index, %attendee, %cmd_arg, %member_info_seen);
 
 #
 # functions
@@ -58,6 +76,19 @@ sub debug_print
     my @args = @_;
     if (debug()) {
         say STDERR "debug: ".(join " ", @args);
+    }
+    return;
+}
+
+# display usage/help info
+sub usage
+{
+    say STDERR "$0 --max_cpe=(integer CPEs) --start=(scheduled start time) --end=(scheduled end time)";
+    say STDERR "    --bus_end=(end of business actual time) --start_grace_period=(integer minutes of grace period";
+    say STDERR "    --meeting_title=title --config_file=(YAML config file path) --output=(output file path)";
+    say STDERR "options";
+    foreach my $key (keys %option_def) {
+        say STDERR sprintf("--%12s  %s", $key, $option_def{$key});
     }
     return;
 }
@@ -212,14 +243,97 @@ sub tableFetch
     return $tables{$table}{data}[$row][$index{$table}{$col}];
 }
 
+# read an attendance report file
+# this can be used for the CPE report
+# alternatively it can read past months' attendance looking for names & ISC2 cert numbers to match with an email
+sub read_attendance_report
+{
+    my $csv_file = shift;
+
+    open_bom(my $fh, $csv_file, ":utf8"); # use File::BOM::open_bom because Zoom's CSV report is UTF8 with Byte Order Mark
+    my @lines;
+    while (<$fh>) {
+        chomp; # remove newlines
+        push @lines, $_;
+    }
+    close $fh;
+
+    #
+    # 1st pass: Divide separate Zoom reports into their own CSV tables.
+    #
+
+    # CSV libraries can't process multiple CSV tables concatenated into one file like Zoom makes.
+    my $table_title = "none";
+    my @titles;
+    my %csv_tables;
+    while (my $line = shift @lines) {
+        if ($line =~ /^([^,]+),$/) {
+            $table_title = fc $1;
+            push @titles, $table_title;
+            next;
+        }
+        if ($line =~ /^Report Generated:,"([^"]*)"$/) {
+                $timestamp{generated} = [parseDate($1)];
+                next;
+        }
+        if (not exists $csv_tables{$table_title}) {
+            $csv_tables{$table_title} = [];
+        }
+        push @{$csv_tables{$table_title}}, $line;
+    }
+
+    # debug: print names and sizes of tables
+    if (debug()) {
+        foreach my $table (sort keys %csv_tables) {
+            say $table.": ".scalar(@{$csv_tables{$table}});
+        }
+    }
+
+    #
+    # 2nd pass: process CSV text tables into array-of-arrays structure
+    #
+    my %report;
+    foreach my $table (sort keys %csv_tables) {
+        $report{$table} = {};
+        $report{$table}{data} = [];
+        my $csv = Text::CSV->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1, decode_utf8 => 1,
+            allow_loose_quotes => 1, allow_loose_escapes => 1});
+        if (not defined $csv) {
+            croak "Text::CSV initialization failed: ".Text::CSV->error_diag();
+        }
+        $report{$table}{count} = -1; # start count from -1 so the header won't be included
+        foreach my $csv_line (@{$csv_tables{$table}}) {
+            $csv->parse($csv_line);
+            if ($report{$table}{count} == -1) {
+                $csv->column_names(map {fc $_} ($csv->fields()));
+                $report{$table}{columns} = [$csv->column_names()];
+            } else {
+                push @{$report{$table}{data}}, [$csv->fields()];
+            }
+            $report{$table}{count}++;
+        }
+    }
+
+    # debug: print data from 2nd pass
+    debug_print Dumper(\%report);
+
+    # return results
+    return {report => \%report, titles => \@titles};
+}
+
 #
 # mainline
 #
 
 # read command line arguments
-GetOptions( \%cmd_arg, "max_cpe|cpe:i", "start:s", "end:s", "bus_end|biz:s", "start_grade_period|grace:i",
-    "title|meeting_title:s", "config_file|config:s", "output:s", "gen_makefile|gen-makefile")
+GetOptions( \%cmd_arg, keys %option_def)
     or croak "command line argument processing failed";
+
+# display usage/help if requested
+if ($cmd_arg{help} // 0) {
+    usage();
+    exit 0;
+}
 
 # if --gen-makefile was specified, stop processing and generate a makefile instead
 if ($cmd_arg{gen_makefile} // 0) {
@@ -306,71 +420,9 @@ if (not $csv_file) {
 if (not -e $csv_file) {
     croak "file $csv_file does not exist";
 }
-open_bom(my $fh, $csv_file, ":utf8"); # use File::BOM::open_bom because Zoom's CSV report is UTF8 with Byte Order Mark
-my @lines;
-while (<$fh>) {
-    chomp; # remove newlines
-    push @lines, $_;
-}
-close $fh;
-
-#
-# 1st pass: Divide separate Zoom reports into their own CSV tables.
-#
-
-# CSV libraries can't process multiple CSV tables concatenated into one file like Zoom makes.
-my $table_title = "none";
-my @table_titles;
-my %csv_tables;
-while (my $line = shift @lines) {
-    if ($line =~ /^([^,]+),$/) {
-        $table_title = lc $1;
-        push @table_titles, $table_title;
-        next;
-    }
-    if ($line =~ /^Report Generated:,"([^"]*)"$/) {
-            $timestamp{generated} = [parseDate($1)];
-            next;
-    }
-    if (not exists $csv_tables{$table_title}) {
-        $csv_tables{$table_title} = [];
-    }
-    push @{$csv_tables{$table_title}}, $line;
-}
-
-# debug: print names and sizes of tables
-if (debug()) {
-    foreach my $table (sort keys %csv_tables) {
-        say $table.": ".scalar(@{$csv_tables{$table}});
-    }
-}
-
-#
-# 2nd pass: process CSV text tables into array-of-arrays structure
-#
-foreach my $table (sort keys %csv_tables) {
-    $tables{$table} = {};
-    $tables{$table}{data} = [];
-    my $csv = Text::CSV->new({binary => 1, blank_is_undef => 1, empty_is_undef => 1, decode_utf8 => 1,
-        allow_loose_quotes => 1, allow_loose_escapes => 1});
-    if (not defined $csv) {
-        croak "Text::CSV initialization failed: ".Text::CSV->error_diag ();
-    }
-    $tables{$table}{count} = -1; # start count from -1 so the header won't be included
-    foreach my $csv_line (@{$csv_tables{$table}}) {
-        $csv->parse($csv_line);
-        if ($tables{$table}{count} == -1) {
-            $csv->column_names(map {lc $_} ($csv->fields()));
-            $tables{$table}{columns} = [$csv->column_names()];
-        } else {
-            push @{$tables{$table}{data}}, [$csv->fields()];
-        }
-        $tables{$table}{count}++;
-    }
-}
-
-# debug: print data from 2nd pass
-debug_print Dumper(\%tables);
+my $report_ref = read_attendance_report($csv_file);
+%tables = %{$report_ref->{report}};
+my @table_titles = @{$report_ref->{titles}};
 
 #
 # 3rd pass: tally user attendance
