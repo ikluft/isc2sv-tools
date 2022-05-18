@@ -547,7 +547,7 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
         if (not exists $record->{cpe}) {
             my $cpe = computeCPE($attendee{$akey});
             next if not defined $cpe;
-            if ($cpe > 0) {
+            if ($cpe >= 0) {
                 $record->{cpe} = $cpe;
             }
         }
