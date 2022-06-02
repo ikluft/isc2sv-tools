@@ -246,7 +246,7 @@ sub main
 	do { main(); };
 
 	# catch any exceptions thrown in main routine
-	if (defined $EVAL_ERROR) {
+	if ($EVAL_ERROR) {
         # print exception as a plain string
         say STDERR "$0 failed with exception: $EVAL_ERROR";
         exit 1;
