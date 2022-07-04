@@ -196,3 +196,6 @@ print $out_fh $qr_out->png
 	or croak "failed to write to QR code image file: $!";
 close $out_fh
 	or croak "failed to close QR code image file: $!";
+
+# done
+say STDERR "complete: check QR code file for desired results";
