@@ -13,6 +13,10 @@
 #               --meeting_title=title (abbrev --title)
 #               --config_file=YAML config file path (abbrev --config)
 #               --output=output file path
+#
+# originally written for ISC² Silicon Valley Chapter meetings
+# latest code at https://github.com/ikluft/isc2sv-tools
+# Open Source terms: GNU General Public License v3.0 https://github.com/ikluft/isc2sv-tools/blob/main/LICENSE
 #===============================================================================
 use strict;
 use warnings;
