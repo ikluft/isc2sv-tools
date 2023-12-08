@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # generate ICal event data and a QR code image
 # by Ian Kluft, 2020-08-31
-# originally written for ISC² Silicon Valley Chapter meetings
+# originally written for ISC2 Silicon Valley Chapter meetings
 # latest code at https://github.com/ikluft/isc2sv-tools
 # Open Source terms: GNU General Public License v3.0 https://github.com/ikluft/isc2sv-tools/blob/main/LICENSE
 use Modern::Perl qw(2018); # includes strict and warnings

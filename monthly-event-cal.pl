@@ -2,7 +2,7 @@
 #===============================================================================
 #         FILE: monthly-event-cal.pl
 #        USAGE: ./monthly-event-cal.pl [yaml-config-file]
-#  DESCRIPTION: monthly event calculator generalized from script for ISC² Silicon Valley Chapter
+#  DESCRIPTION: monthly event calculator generalized from script for ISC2 Silicon Valley Chapter
 #       AUTHOR: Ian Kluft
 #      CREATED: 03/05/2020
 #===============================================================================

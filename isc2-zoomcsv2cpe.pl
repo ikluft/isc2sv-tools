@@ -1,9 +1,9 @@
 #!/usr/bin/perl 
 #===============================================================================
 #         FILE: zoomcsv2cpe.pl
-#  DESCRIPTION: convert Zoom webinar attendee report to ISC² CPE list
+#  DESCRIPTION: convert Zoom webinar attendee report to ISC2 CPE list
 #       AUTHOR: Ian Kluft
-# ORGANIZATION: (ISC)² Silicon Valley Chapter
+# ORGANIZATION: ISC2 Silicon Valley Chapter
 #      CREATED: 04/14/2021 04:12:54 PM
 #  CLI OPTIONS: --max_cpe=integer CPEs (default 2, abbreviated --cpe)
 #               --start=scheduled start time
@@ -14,7 +14,7 @@
 #               --config_file=YAML config file path (abbrev --config)
 #               --output=output file path
 #
-# originally written for ISC² Silicon Valley Chapter meetings
+# originally written for ISC2 Silicon Valley Chapter meetings
 # latest code at https://github.com/ikluft/isc2sv-tools
 # Open Source terms: GNU General Public License v3.0 https://github.com/ikluft/isc2sv-tools/blob/main/LICENSE
 #===============================================================================
@@ -532,7 +532,7 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
 }
 
 #
-# compute attendee CPEs and generate CSV (spreadsheet) output CPE data for ISC²
+# compute attendee CPEs and generate CSV (spreadsheet) output CPE data for ISC2
 #
 {
     ## no critic (InputOutput::RequireBriefOpen)
@@ -545,7 +545,7 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
         ["(ISC)2 Member #", "Member First Name", "Member Last Name", "Title of Meeting", "# CPEs",
         "Date of Activity", "CPE qualifying minutes"]);
 
-    # loop through attendee records: compute CPEs and output CSV CPE data for ISC²
+    # loop through attendee records: compute CPEs and output CSV CPE data for ISC2
     foreach my $akey (sort {$attendee{$a}{'last name'} cmp $attendee{$b}{'last name'}} keys %attendee) {
         my $record = $attendee{$akey};
         if (not exists $record->{cpe}) {
@@ -556,7 +556,7 @@ foreach my $table ('host details', 'attendee details', 'panelist details') {
             }
         }
 
-        # if ISC² member certificate number is available, generate CSV for ISC²
+        # if ISC2 member certificate number is available, generate CSV for ISC2
         if (exists $record->{isc2} and $record->{isc2} =~ qr/\d+/) {
             # filter out extraneous text as long as the text includes an ISC2 cert name and a number is present
             my $isc2num = $record->{isc2};

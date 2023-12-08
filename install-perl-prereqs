@@ -1,5 +1,5 @@
 #/bin/sh
-# install Perl prerequisite modules for ISC²SV tools
+# install Perl prerequisite modules for ISC2SV tools
 dep_scripts="ical-isc2sv-mtg.pl isc2-zoomcsv2cpe.pl monthly-event-cal.pl"
 
 # error_exit function
@@ -15,5 +15,5 @@ cpan install YAML CPAN < /dev/null || error_exit "CPAN upgrade failed"
 # make sure Sys::OsPackage is installed
 cpan Sys::OsPackage || error_exit "installation of Sys::OsPackage failed"
 
-# install ISC²SV tools prerequisites
+# install ISC2SV tools prerequisites
 fetch-reqs.pl $dep_scripts || error_exit "failed to run fetch-reqs.pl"
